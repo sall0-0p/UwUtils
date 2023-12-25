@@ -1,12 +1,21 @@
-local Instance = require(".UwUtils.Classes.Instance")
+local file = fs.open("/log.txt", "w")
+file.close()
 
-local SomeInstance = Instance.new("Instance", {
-    __children = {}
-})
+require(".UwUtils")
 
-local GuiObject = Instance.new("GuiObject", SomeInstance)
-GuiObject.Name = "Bucket"
+local Instance = Terminal:GetService("Instance")
 
-print(SomeInstance.Bucket.ZIndex)
-print(GuiObject.ZIndex)
-print(SomeInstance:FindFirstChildOfClass("GuiObject").ZIndex)
+local Element = Instance.new("GuiObject")
+Element.Parent = Terminal
+Element.Name = "UwU_Frame"
+
+print(Element)
+print(Element.Parent)
+Element.Destroying:Connect(function() 
+    print("Im Getting Destroyed! HELP ME! PLEASEEE!")
+end)
+
+Element:Destroy()
+
+print(Element)
+print(Terminal.Element)

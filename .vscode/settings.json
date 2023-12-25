@@ -2,9 +2,11 @@
     "Lua.diagnostics.globals": [
         "sleep",
         "__newindex",
-        "colors"
+        "colors",
+        "fs",
+        "term",
+        "Terminal"
     ],
     "Lua.diagnostics.disable": [
-        "undefined-field"
     ]
 }

@@ -1,16 +1,5 @@
--- Assigning custom functions
+local globals = require(".UwUtils.globals")
 
-function table.deepcopy(tbl)
-    local result = {}
-
-    for index, value in pairs(tbl) do
-        if type(value) == "table" then
-            table.deepcopy(value)
-        else
-            result[index] = value
-        end
-
-        setmetatable(result, getmetatable(tbl))
-        return result
-    end
+for key, some_global in pairs(globals) do
+    _G[key] = some_global
 end
