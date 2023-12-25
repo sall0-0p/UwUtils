@@ -21,8 +21,7 @@ local Terminal = {
 }
 
 function Terminal:GetService(serviceName)
-    print(type(serviceName), serviceName)
-    assert(self.__services[serviceName], "Service '" .. serviceName "' does not exist!")
+    assert(self.__services[serviceName], "Service '" .. serviceName .. "' does not exist!")
     return self.__services[serviceName]
 end
 
@@ -41,7 +40,9 @@ setmetatable(Terminal, {
 
         rawset(obj, key, value)
     end,
-    __tostring = "Terminal"
+    __tostring = function(obj) 
+        return obj.Name
+    end
 })
 
 return Terminal

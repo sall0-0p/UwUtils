@@ -5,7 +5,7 @@ function TableUtils.deepcopy(tbl)
 
     for index, value in pairs(tbl) do
         if type(value) == "table" then
-            table.deepcopy(value)
+            TableUtils.deepcopy(value)
         else
             result[index] = value
         end

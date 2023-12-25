@@ -35,6 +35,7 @@
 ]]
 
 local Signal = require(".UWUtils.Utility.Signal")
+local TableUtils = require(".UwUtils.Utility.TableUtils")
 local log = require(".UwUtils.Utility.Log")
 
 local Instance = {
@@ -103,15 +104,21 @@ function Instance.new(className, parent)
             -- if we are assigning parent
             if key == "Parent" then
                 if obj.Parent then
+                    print("Passed check")
                     for index, child in ipairs(obj.Parent.__children) do
+                        
                         if child == obj then
+                            print("REMOVING " .. child.Name .. " from " .. obj.Parent.Name)
                             table.remove(obj.Parent.__children, index)
                         end
                     end
                 end
-                
-                table.insert(value.__children, obj)
+
                 rawset(obj, "Parent", value)
+                
+                if value then
+                    table.insert(value.__children, obj)
+                end
             else
                 -- handle __onChangeFunctions
                 if obj.__onChangeFunctions then
@@ -123,7 +130,7 @@ function Instance.new(className, parent)
                 end
 
                 -- assign value
-                obj[key] = value
+                rawset(obj, key, value)
             end
         end,
 
@@ -141,23 +148,27 @@ end
 
 -- inheritable functions: 
 
-function Instance:Clone(self)
-    ---@diagnostic disable-next-line: undefined-field
-    local cloned_instance = table.deepcopy(self)
+function Instance:Clone()
+    local cloned_instance = TableUtils.deepcopy(self)
     cloned_instance.Parent = nil
 
     return cloned_instance
 end
 
-function Instance:Destroy(self)
+function Instance:Destroy()
     self.Destroying:Fire()
 
+    ---@diagnostic disable-next-line: undefined-field
     for key, object in ipairs(self.Parent.__children) do
         if object == self then
+            ---@diagnostic disable-next-line: undefined-field
             table.remove(self.Parent.__children, key)
         end
     end
-    self = nil
+
+    for _, child in ipairs(self.__children) do
+        child:Destroy()
+    end
 end
 
 function Instance:FindFirstChild(name)
