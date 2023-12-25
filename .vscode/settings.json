@@ -1,0 +1,10 @@
+{
+    "Lua.diagnostics.globals": [
+        "sleep",
+        "__newindex",
+        "colors"
+    ],
+    "Lua.diagnostics.disable": [
+        "undefined-field"
+    ]
+}
