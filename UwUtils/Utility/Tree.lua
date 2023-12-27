@@ -7,12 +7,17 @@ local function addSpacing(n)
     return result
 end
 
-local function show_tree(object)
-    print()
-    print("/ Tree of " .. object.Name .. " | " .. object.ClassName)
+local log = require(".UwUtils.Utility.Log")
+
+local function show_tree(object, isChild)
+    if not isChild then
+        log("\n ------------")
+        log("\n [TREE TITLE] Tree of " .. object.Name .. " | " .. object.ClassName)
+    end
+
     for _, child in ipairs(object.__children) do
-        print(child.Name .. " | " .. child.ClassName .. " | " .. child.Parent.Name)
-        -- show_tree(child)
+        log("\n [TREE ITEM] " .. child.Name .. " | " .. child.ClassName .. " | " .. child.Parent.Name)
+        show_tree(child, true)
     end
 end
 

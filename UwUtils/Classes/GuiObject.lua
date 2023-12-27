@@ -26,7 +26,7 @@
 
 local GuiObject = {
     -- attributes
-    AnchorPoint = nil,
+    AnchorPoint = {0, 0},
     AutomaticSize = true,
     BackgroundColor = colors.white,
 
@@ -35,8 +35,8 @@ local GuiObject = {
     BorderMode = "inline",
 
     Draggable = false,
-    Position = nil,
-    Size = nil,
+    Position = {1, 1},
+    Size = {15, 10},
     Visible = true,
     ZIndex = 1,
     

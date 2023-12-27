@@ -1,9 +1,9 @@
 -- getting stuff from files
-local Terminal = require(".UwUtils.Classes.Terminal")
+local Instance = require(".UwUtils.Classes.Instance")
 
 -- actual globals
 local globals = {}
 
-globals.Terminal = Terminal
+globals.Terminal = Instance.new("Terminal")
 
 return globals

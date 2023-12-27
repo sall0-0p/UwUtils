@@ -5,7 +5,8 @@
         "colors",
         "fs",
         "term",
-        "Terminal"
+        "Terminal",
+        "textutils"
     ],
     "Lua.diagnostics.disable": [
     ]

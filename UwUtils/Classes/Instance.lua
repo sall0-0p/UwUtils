@@ -71,79 +71,86 @@ function Instance.new(className, parent)
         Name = className,
         ClassName = className,
         Parent = parent,
+
+        __children = {},
+        __proxy = {},
     }
     local mainClass = require(".UwUtils.Classes." .. className)
     assert(mainClass.__public, "Cannot create Instance of class '" .. className .. "' (private)")
 
+    local proxy = {}
+
     setmetatable(object, {
-        __index = function(self, key) 
-            for _, subclass in ipairs(mainClass.__inherit) do
-                local subclass = require(".UwUtils.Classes." .. subclass)
+        __tostring = function(obj) 
+            return obj.Name
+        end
+    })
+
+    setmetatable(proxy, {
+        __index = function(obj, key) 
+            if rawget(object, key) then
+                return rawget(object, key)
+            end
+
+            for _, subclass_name in ipairs(mainClass.__inherit) do
+                local subclass = require(".UwUtils.Classes." .. subclass_name)
                 if subclass[key] then
                     return subclass[key]
                 end
             end
-
-            if self:FindFirstChild(key) then
-                return self:FindFirstChild(key)
-            end
-
-            return nil
         end,
 
         __newindex = function(obj, key, value)
-            -- check for read-only
-            if obj.__readOnly then
-                for _, attribute in ipairs(obj.__readOnly) do
-                    if key == attribute then
-                        error("Cannot change read-only value '" .. key .. "'")
-                    end
-                end
-            end
-
-            -- if we are assigning parent
             if key == "Parent" then
                 if obj.Parent then
-                    print("Passed check")
                     for index, child in ipairs(obj.Parent.__children) do
-                        
                         if child == obj then
-                            print("REMOVING " .. child.Name .. " from " .. obj.Parent.Name)
-                            table.remove(obj.Parent.__children, index)
+                            obj.Parent.__children[index] = nil
                         end
                     end
                 end
-
-                rawset(obj, "Parent", value)
                 
+                object.Parent = value
+
                 if value then
-                    table.insert(value.__children, obj)
+                    if value.__children then
+                        log("\n [LOG] " .. object.Name .. " | Adding object to children of value")
+                        table.insert(value.__children, proxy)
+                    end
                 end
             else
-                -- handle __onChangeFunctions
-                if obj.__onChangeFunctions then
-                    for _, attribute in ipairs(obj.__onChangeFunctions) do
+                if obj.__readOnly then
+                    for _, attribute in ipairs(obj.__readOnly) do
                         if key == attribute then
-                            obj.__onChangeFunctions[key](value)
+                            error("Cannot change read-only value '" .. key .. "'")
                         end
                     end
                 end
 
-                -- assign value
-                rawset(obj, key, value)
+                if obj.__onChangeFunctions then
+                    if obj.__onChangeFunctions[key] then
+                        obj.__onChangeFunction(value)
+                    end
+                end
+
+                obj.Changed:Fire()
+
+                rawset(object, key, value)
             end
         end,
 
         __tostring = function(obj)
             return obj.Name
-        end
+        end,
     })
 
+    object.__proxy = proxy
+
     if parent then
-        table.insert(parent.__children, object)
+        table.insert(parent.__children, proxy)
     end
     
-    return object
+    return proxy
 end
 
 -- inheritable functions: 
@@ -260,12 +267,13 @@ function Instance:GetChildren()
     return self.__children
 end
 
-function Instance:GetDescendants(self)
+function Instance:GetDescendants()
     local descendants = {}
 
     for _, child in ipairs(self:GetChildren()) do
         table.insert(descendants, child)
 
+        ---@diagnostic disable-next-line: redundant-parameter
         local childDescendants = Instance:GetDescendants(child)
         for _, descendant in ipairs(childDescendants) do
             table.insert(descendants, descendant)
@@ -276,7 +284,7 @@ function Instance:GetDescendants(self)
 end
 
 function Instance:IsA(className)
-    for _, subclass in self.__inherit do
+    for _, subclass in ipairs(self.__inherit) do
         if subclass == className then
             return true
         end

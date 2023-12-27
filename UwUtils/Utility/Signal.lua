@@ -13,6 +13,9 @@ local Signal = {
     __bindedFunctions = {},
 }
 Signal.__index = Signal
+Signal.__tostring = function() 
+    return "Signal"
+end
 
 function Signal.new()
     local signal = {}
