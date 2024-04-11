@@ -17,6 +17,22 @@ local Frame = {
     },
 }
 
+-- generates empty frame
+local function create_empty() 
+    local termWidth, termHeight = term.getSize()
+    local blank_layer = {}
+    
+    for row = 1, termHeight, 1 do
+        blank_layer[row] = {}
+        for column = 1, termWidth, 1 do
+            blank_layer[row][column] = "NONE"
+        end
+    end
+
+    return blank_layer
+end
+
+-- renderer
 function Frame:__renderLayer() 
     local render_result = {}
 
@@ -35,42 +51,28 @@ function Frame:__renderLayer()
 
     if self.Parent then
         if self.Parent:IsA("GuiObject") then
-            offsetX = offsetX + self.Parent.AbsolutePosition[1]
-            offsetY = offsetY + self.Parent.AbsolutePosition[2]
+            offsetX = offsetX + self.Parent.AbsolutePosition[1] - 1
+            offsetY = offsetY + self.Parent.AbsolutePosition[2] - 1
         end
     end
 
     self.AbsolutePosition = {offsetX, offsetY}
 
-    local check = false
+    if not self.Visible then
+        return create_empty()
+    end
+
     for row = 1, termHeight, 1 do
         render_result[row] = {}
         for column = 1, termWidth, 1 do
-            if self.Visible then
-                if ((column >= offsetX) and (column < offsetX + width)) and ((row >= offsetY) and (row < offsetY + height)) then
-                    render_result[row][column] = {
-                        symbol = "\0",
-                        bg = background_color,
-                        fg = background_color,
-                        zindex = self.ZIndex,
-                        object = self.__proxy,
-                    }
-
-                    if self.__debugCheckboard then
-                        -- TODO: Remove this!
-                        if check then 
-                            render_result[row][column].bg = background_color
-                            render_result[row][column].fg = background_color
-                        else
-                            render_result[row][column].bg = colors.white
-                            render_result[row][column].fg = colors.white
-                        end
-                    end
-
-                    check = not check
-                else
-                    render_result[row][column] = "NONE"
-                end
+            if ((column >= offsetX) and (column < offsetX + width)) and ((row >= offsetY) and (row < offsetY + height)) then
+                render_result[row][column] = {
+                    symbol = "\0",
+                    bg = background_color,
+                    fg = background_color,
+                    zindex = self.ZIndex,
+                    object = self.__proxy,
+                }
             else
                 render_result[row][column] = "NONE"
             end

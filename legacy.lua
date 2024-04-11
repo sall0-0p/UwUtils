@@ -11,7 +11,6 @@ local function clear()
     for y = 1, term_height, 1 do
         TerminalGrid[y] = {}
         for x = 1, term_width, 1 do
-            -- log("\n" .. x .. " " .. y)
             TerminalGrid[y][x] = {
                 symbol = "\0",
                 background = colors.black,

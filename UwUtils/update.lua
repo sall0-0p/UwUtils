@@ -1,4 +1,3 @@
-local TerminalGrid = {}
 local ActiveLayers = {}
 local log = require(".UwUtils.Utility.Log")
 local tree = require(".UwUtils.Utility.Tree")
@@ -13,16 +12,25 @@ local function draw(layer)
     local termWidth, termHeight = term.getSize()
 
     for row = 1, termHeight, 1 do
+        local symbolBlit = ""
+        local colorBlit = ""
+        local backgroundBlit = ""
         for column = 1, termWidth, 1 do
             if layer[row][column] ~= "NONE" then
                 local cell = layer[row][column]
-                term.setCursorPos(column, row)
-                term.setTextColor(cell.fg)
-                term.setBackgroundColor(cell.bg)
 
-                term.write(cell.symbol)
+                symbolBlit = symbolBlit .. cell.symbol
+                colorBlit = colorBlit .. colors.toBlit(cell.fg)
+                backgroundBlit = backgroundBlit .. colors.toBlit(cell.bg)
+            else
+                symbolBlit = symbolBlit .. " "
+                colorBlit = colorBlit .. "f"
+                backgroundBlit = backgroundBlit .. "f"
             end
         end
+
+        term.setCursorPos(1, row)
+        term.blit(symbolBlit, colorBlit, backgroundBlit)
     end
 end
 
@@ -41,9 +49,11 @@ local function create_empty()
 end
 
 local function merge_cell(cell1, cell2)
-    -- log("\n " .. textutils.serialise(cell1) .. " | " .. textutils.serialise(cell2))
-    -- log("\n" .. tostring(not_trans(cell1)) .. " | " .. tostring(not_trans(cell2)))
-    if not_trans(cell1) and not_trans(cell2) then
+    if (not_trans(cell1) and not_trans(cell2)) then
+        -- log(cell1.object.Name)
+        -- log(cell2.object.Name)
+        -- log(textutils.serialise(cell1))
+        -- log(textutils.serialise(cell2))
         if cell1.zindex > cell2.zindex then
             return cell1
         else
@@ -65,8 +75,6 @@ local function merge(layer1, layer2)
     for row = 1, termHeight, 1 do
         merge_result[row] = {}
         for column = 1, termWidth, 1 do
-            -- log(textutils.serialise(layer1[row], {allow_repetitions = true}))
-            -- log(textutils.serialise(layer2[row], {allow_repetitions = true}))
             local cell1 = layer1[row][column]
             local cell2 = layer2[row][column]
 
@@ -81,7 +89,11 @@ local function merge_all(layers)
     local merged_result = create_empty()
     
     for _, layer in ipairs(layers) do
-        merged_result = merge(merged_result, layer)
+        merged_result = merge(merged_result, layer[2])
+
+        if merged_result == "SKIP" then
+            return create_empty()
+        end
     end
 
     return merged_result
@@ -91,35 +103,36 @@ end
 
 local Instance = Terminal:GetService("Instance")
 
-local Frame = Instance.new("Frame", Terminal)
+local function updateScreen()
+    while true do
+        local ActiveObjects = Terminal.__updateQueue
 
-Frame.Size = {15, 10}
-Frame.Position = {5, 3}
-Frame.BackgroundColor = colors.blue
+        for key, order in ipairs(ActiveObjects) do
+            local descendant = order[1]
+            local reason = order[2] or "NO REASON"
+            log(key.." Processing update of ".. descendant.Name .." for key ".. reason)
+            if descendant:IsA("GuiObject") then
+                local alreadyExists = false
+                for key, layer in ipairs(ActiveLayers) do
+                    if layer[1] == descendant then
+                        layer[2] = descendant:__renderLayer()
+                        alreadyExists = true
+                    end
+                end
 
-local HighFrame = Instance.new("Frame", Terminal)
+                if not alreadyExists then
+                    table.insert(ActiveLayers, {descendant, descendant:__renderLayer()})
+                end
+            end
+        end
 
-HighFrame.Size = {15, 10}
-HighFrame.Position = {7, 5}
-HighFrame.BackgroundColor = colors.red
+        if #Terminal.__updateQueue ~= 0 then
+            local result = merge_all(ActiveLayers)
+            draw(result)
+        end
+        Terminal.__updateQueue = {}
+        os.sleep(0.05)
+    end
+end
 
-local LowestFrame = Instance.new("Frame", Terminal)
-
-LowestFrame.Size = {41, 10}
-LowestFrame.Position = {2, 2}
-LowestFrame.BackgroundColor = colors.green
-LowestFrame.ZIndex = 0
-
-local ChildFrame = Instance.new("Frame", HighFrame)
-
-ChildFrame.Size = {3, 2}
-ChildFrame.BackgroundColor = colors.yellow
-
-table.insert(ActiveLayers, Frame:__renderLayer())
-table.insert(ActiveLayers, HighFrame:__renderLayer())
-table.insert(ActiveLayers, ChildFrame:__renderLayer())
-table.insert(ActiveLayers, LowestFrame:__renderLayer())
-
-local result = merge_all(ActiveLayers)
-draw(result)
--- log(textutils.serialise(result, {allow_repetitions = true}))
+updateScreen()

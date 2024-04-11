@@ -57,6 +57,10 @@ local Instance = {
     __children = {},
     __readOnly = {
         "ClassName",
+        "__public",
+        "__readOnly",
+        "__onChangeFunctions",
+        "__inherit",
     },
     __onChangeFunctions = {},
 
@@ -87,8 +91,8 @@ function Instance.new(className, parent)
     })
 
     setmetatable(proxy, {
-        __index = function(obj, key) 
-            if rawget(object, key) then
+        __index = function(obj, key)
+            if rawget(object, key) ~= nil then
                 return rawget(object, key)
             end
 
@@ -98,6 +102,13 @@ function Instance.new(className, parent)
                     return subclass[key]
                 end
             end
+
+            local child = obj:FindFirstChild(key)
+            if child ~= nil then
+                return child
+            end
+
+            error(key .. " is not a member of " .. rawget(object, "ClassName") .. " " .. rawget(object, "Name"))
         end,
 
         __newindex = function(obj, key, value)
@@ -110,14 +121,20 @@ function Instance.new(className, parent)
                     end
                 end
                 
-                object.Parent = value
+                rawset(object, "Parent", value)
+                obj.Changed:Fire()
+                value.Changed:Fire()
 
                 if value then
                     if value.__children then
-                        log("\n [LOG] " .. object.Name .. " | Adding object to children of value")
                         table.insert(value.__children, proxy)
                     end
                 end
+                
+                table.insert(Terminal.__updateQueue, {proxy, key})
+                table.insert(Terminal.__updateQueue, {value, key})
+            elseif key == "AbsolutePosition" or key == "AbsoluteSize" then
+                rawset(object, key, value)
             else
                 if obj.__readOnly then
                     for _, attribute in ipairs(obj.__readOnly) do
@@ -127,15 +144,24 @@ function Instance.new(className, parent)
                     end
                 end
 
+                rawset(object, key, value)
+
                 if obj.__onChangeFunctions then
                     if obj.__onChangeFunctions[key] then
-                        obj.__onChangeFunction(value)
+                        obj.__onChangeFunctions[key](proxy, value)
                     end
                 end
 
                 obj.Changed:Fire()
+                table.insert(Terminal.__updateQueue, {proxy, key})
 
-                rawset(object, key, value)
+                if key == "Size" or key == "Position" then
+                    log("\n [M] Looping thru descendants!")
+                    for _, descendant in ipairs(obj:GetChildren()) do
+                        log("\n" .. descendant.Name .. " | " .. descendant.ClassName)
+                        table.insert(Terminal.__updateQueue, {descendant, key})
+                    end
+                end
             end
         end,
 
@@ -143,13 +169,20 @@ function Instance.new(className, parent)
             return obj.Name
         end,
     })
-
+ 
     object.__proxy = proxy
 
     if parent then
-        table.insert(parent.__children, proxy)
+        proxy.Parent = parent
+        if Terminal then
+            table.insert(Terminal.__updateQueue, {proxy, key})
+        end
+    else
+        if Terminal then
+            table.insert(Terminal.__updateQueue, {proxy, key})
+        end
     end
-    
+
     return proxy
 end
 
@@ -247,6 +280,26 @@ function Instance:FindFirstAncestor(name)
     return nil
 end
 
+function Instance:IsDescendantOf(object)
+    local instance = self
+
+    while instance and self.Parent do
+        if instance.ClassName ~= "Terminal" then
+            instance = self.Parent
+
+            if instance then
+                if instance.Name == object.Name then
+                    return true
+                end
+            end
+        else
+            break
+        end
+    end
+
+    return false
+end
+
 function Instance:FindFirstAncestorOfClass(className)
     local instance = self
 
@@ -273,7 +326,7 @@ function Instance:GetDescendants()
     for _, child in ipairs(self:GetChildren()) do
         table.insert(descendants, child)
 
-        ---@diagnostic disable-next-line: redundant-parameter
+        --@diagnostic disable-next-line: redundant-parameter
         local childDescendants = Instance:GetDescendants(child)
         for _, descendant in ipairs(childDescendants) do
             table.insert(descendants, descendant)
